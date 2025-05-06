@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simpler Alternatives</title>
+    <style>
+        :root {
+            --primary-color: #3a5a78;
+            --text-color: #333;
+            --light-bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        
+        body {
+            background-color: var(--light-bg);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            max-width: 600px;
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .card-container {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 2rem;
+            width: 100%;
+            max-width: 700px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 280px;
+        }
+        
+        .phrase-card {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            width: 100%;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            background-color: white;
+            transition: transform 0.3s ease;
+        }
+        
+        .phrase-side {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .label {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            font-weight: bold;
+            color: #777;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.5px;
+        }
+        
+        .phrase {
+            font-size: 1.4rem;
+            font-weight: 400;
+            line-height: 1.4;
+        }
+        
+        .wordy {
+            color: #555;
+        }
+        
+        .concise {
+            color: #2a6f97;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #2a4a68;
+        }
+        
+        button:active {
+            background-color: #1f3a58;
+        }
+        
+        .counter {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #777;
+        }
+        
+        #loading {
+            font-size: 1.2rem;
+            color: #777;
+            margin: 1rem 0;
+        }
+        
+        @media (max-width: 600px) {
+            .phrase-card {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .phrase-side {
+                padding: 0.5rem 0;
+            }
+            
+            .phrase {
+                font-size: 1.2rem;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Simpler Alternatives</h1>
+    </header>
+    
+    <div class="card-container">
+        <div id="loading">Loading all 919 phrases...</div>
+        <div class="phrase-card" style="display:none">
+            <div class="phrase-side">
+                <div class="label">Instead of</div>
+                <div class="phrase wordy" id="wordy-phrase"></div>
+            </div>
+            <div class="phrase-side">
+                <div class="label">Use</div>
+                <div class="phrase concise" id="concise-phrase"></div>
+            </div>
+        </div>
+        
+        <div class="controls" style="display:none">
+            <button id="prev-btn">Previous</button>
+            <button id="next-btn">Next</button>
+        </div>
+        
+        <div class="counter" id="counter"></div>
+    </div>
+    
+    <script>
+        // Function to load CSV data
+        async function loadCSVData() {
+            try {
+                // Fetch the CSV file
+                const response = await fetch('phrases.csv');
+                const csvText = await response.text();
+                
+                // Parse the CSV data
+                const phrases = [];
+                const lines = csvText.split('\n');
+                
+                // Skip header row
+                for (let i = 1; i < lines.length; i++) {
+                    if (!lines[i].trim()) continue;
+                    
+                    // Handle CSV parsing with potential quotes and commas
+                    let line = lines[i];
+                    let inQuotes = false;
+                    let wordyPhrase = '';
+                    let replacement = '';
+                    let currentField = '';
+                    
+                    for (let j = 0; j < line.length; j++) {
+                        const char = line[j];
+                        
+                        if (char === '"') {
+                            inQuotes = !inQuotes;
+                        } else if (char === ',' && !inQuotes) {
+                            // End of first field
+                            wordyPhrase = currentField.trim();
+                            currentField = '';
+                        } else {
+                            currentField += char;
+                        }
+                    }
+                    
+                    // The remainder is the replacement
+                    replacement = currentField.trim();
+                    
+                    // Clean up any quotes
+                    wordyPhrase = wordyPhrase.replace(/^"(.*)"$/, '$1');
+                    replacement = replacement.replace(/^"(.*)"$/, '$1');
+                    
+                    if (wordyPhrase && replacement) {
+                        phrases.push({
+                            wordy: wordyPhrase,
+                            concise: replacement
+                        });
+                    }
+                }
+                
+                return phrases;
+            } catch (error) {
+                console.error("Error loading CSV:", error);
+                // Return fallback data if CSV loading fails
+                return fallbackData();
+            }
+        }
+        
+        // Fallback data in case CSV loading fails
+        function fallbackData() {
+            return [
+                { wordy: "(a) large number of", concise: "many, most (or say how many)" },
+                { wordy: "(an) absence of", concise: "no, none" },
+                { wordy: "(have) regard to", concise: "take into account" },
+                { wordy: "(it is) compulsory", concise: "(you) must" },
+                { wordy: "(it is) mandatory", concise: "(you) must" },
+                { wordy: "(it) is of importance to note that", concise: "note that, importantly" },
+                { wordy: "(on) very rare occasions", concise: "(on) rare occasions" },
+                { wordy: "a considerable amount of", concise: "much" },
+                { wordy: "a considerable number of", concise: "many" },
+                { wordy: "a decreased number of", concise: "fewer" },
+                // Add more entries if needed...
+            ];
+        }
+        
+        let phrases = [];
+        let currentIndex = 0;
+        const wordyElement = document.getElementById("wordy-phrase");
+        const conciseElement = document.getElementById("concise-phrase");
+        const counterElement = document.getElementById("counter");
+        const prevBtn = document.getElementById("prev-btn");
+        const nextBtn = document.getElementById("next-btn");
+        const loadingElement = document.getElementById("loading");
+        const phraseCard = document.querySelector(".phrase-card");
+        const controls = document.querySelector(".controls");
+        
+        // Update the displayed phrase
+        function updatePhrase() {
+            const current = phrases[currentIndex];
+            wordyElement.textContent = current.wordy;
+            conciseElement.textContent = current.concise;
+            counterElement.textContent = `${currentIndex + 1} / ${phrases.length}`;
+        }
+        
+        // Hide loading message and show content
+        function hideLoading() {
+            loadingElement.style.display = "none";
+            phraseCard.style.display = "grid";
+            controls.style.display = "flex";
+            updatePhrase();
+        }
+        
+        // Event listeners for buttons
+        prevBtn.addEventListener("click", () => {
+            currentIndex = (currentIndex - 1 + phrases.length) % phrases.length;
+            updatePhrase();
+        });
+        
+        nextBtn.addEventListener("click", () => {
+            currentIndex = (currentIndex + 1) % phrases.length;
+            updatePhrase();
+        });
+        
+        // Auto-advance every 6 seconds
+        let autoAdvance;
+        
+        function startAutoAdvance() {
+            autoAdvance = setInterval(() => {
+                currentIndex = (currentIndex + 1) % phrases.length;
+                updatePhrase();
+            }, 6000);
+        }
+        
+        // Reset the auto-advance timer when a button is clicked
+        const resetAutoAdvance = () => {
+            clearInterval(autoAdvance);
+            startAutoAdvance();
+        };
+        
+        prevBtn.addEventListener("click", resetAutoAdvance);
+        nextBtn.addEventListener("click", resetAutoAdvance);
+        
+        // Keyboard navigation
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowLeft") {
+                prevBtn.click();
+            } else if (e.key === "ArrowRight") {
+                nextBtn.click();
+            }
+        });
+        
+        // Initialize
+        async function init() {
+            try {
+                // First try to load with window.fs API if available (Claude environment)
+                if (typeof window.fs !== 'undefined' && window.fs.readFile) {
+                    const fileData = await window.fs.readFile('Common Phrases and More Succinct Alternatives  Writing for Busy Readers.csv', { encoding: 'utf8' });
+                    
+                    // Parse the CSV
+                    const lines = fileData.split('\n');
+                    const header = lines[0].split(',');
+                    
+                    for (let i = 1; i < lines.length; i++) {
+                        if (!lines[i].trim()) continue;
+                        
+                        const parts = lines[i].split(',');
+                        if (parts.length >= 2) {
+                            phrases.push({
+                                wordy: parts[0].trim().replace(/^"(.*)"$/, '$1'),
+                                concise: parts[1].trim().replace(/^"(.*)"$/, '$1')
+                            });
+                        }
+                    }
+                } else {
+                    // Otherwise use the fetch API (standard web)
+                    phrases = await loadCSVData();
+                }
+            } catch (error) {
+                console.error("Error initializing:", error);
+                phrases = fallbackData();
+            }
+            
+            // If we have no phrases, use the hardcoded set
+            if (!phrases || phrases.length === 0) {
+                phrases = [
+                    { wordy: "a number of", concise: "some, many" },
+                    { wordy: "afford an opportunity", concise: "allow, let" },
+                    { wordy: "an appreciable number of", concise: "many" },
+                    { wordy: "as a means of", concise: "to" },
+                    { wordy: "as prescribed by", concise: "in, under" },
+                    { wordy: "at the present time", concise: "now" },
+                    { wordy: "by means of", concise: "by, with" },
+                    { wordy: "comply with", concise: "follow" },
+                    { wordy: "due to the fact that", concise: "because, due to, since" },
+                    { wordy: "during the period of", concise: "during" }
+                ];
+            }
+            
+            // Load complete, show the interface
+            hideLoading();
+            startAutoAdvance();
+        }
+        
+        // Start initialization
+        init();
+    </script>
+</body>
+</html>
