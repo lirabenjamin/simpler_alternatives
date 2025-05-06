@@ -23,6 +23,77 @@ function App() {
         });
       }, []);
 
+  // --- Text checker state & helpers ---
+  const [inputText, setInputText] = useState('');
+  const [highlightedHtml, setHighlightedHtml] = useState('');
+
+  // Escape RegExp special chars
+  const escapeRegExp = (str) =>
+    str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  // Break a "bad phrase" into variants (comma‑separated, strip parentheses)
+  const getVariants = (phrase) => {
+    if (!phrase) return [];
+    // remove anything in parentheses, then split on commas
+    const noParens = phrase.replace(/\([^)]*\)/g, '');
+    return noParens
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
+  };
+
+  // Highlight forbidden words in user‑supplied text
+  const updateHighlight = (text, rows) => {
+    if (!text) {
+      setHighlightedHtml('');
+      return;
+    }
+
+    let result = text;
+
+    rows.forEach(({ word, replacement }) => {
+      const variants = getVariants(word);
+      variants.forEach((variant) => {
+        if (!variant) return;
+        const pattern = new RegExp(`\\b${escapeRegExp(variant)}\\b`, 'gi');
+        result = result.replace(
+          pattern,
+          (match) =>
+            `<mark data-replacement="${replacement.replace(/"/g, '&quot;')}" style="background:#fdecea;color:#c0392b;cursor:pointer;">${match}</mark>`
+        );
+      });
+    });
+
+    setHighlightedHtml(result);
+  };
+
+  // Attach click handlers to <mark> elements whenever the highlighted HTML updates
+  useEffect(() => {
+    const container = document.getElementById('preview');
+    if (!container) return;
+
+    const marks = Array.from(container.querySelectorAll('mark[data-replacement]'));
+
+    const handlers = marks.map((mark) => {
+      const handler = () => {
+        const rep = mark.getAttribute('data-replacement');
+        setInputText((prev) => {
+          const next = prev.replace(mark.textContent, rep);
+          updateHighlight(next, phrases);
+          return next;
+        });
+      };
+      mark.addEventListener('click', handler);
+      return { mark, handler };
+    });
+
+    // cleanup
+    return () => {
+      handlers.forEach(({ mark, handler }) => mark.removeEventListener('click', handler));
+    };
+  }, [highlightedHtml, phrases]);
+
+  // Navigation helpers
   const nextPhrase = () => {
     setIndex((prev) => (prev + 1) % phrases.length);
   };
@@ -117,6 +188,49 @@ function App() {
         >
           Next
         </button>
+      </div>
+
+      {/* Text checker */}
+      <div style={{
+            marginTop: '3rem',
+            maxWidth: '600px',
+            width: '100%',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+          }}>
+        <h2 style={{ textAlign: 'left' }}>Check your text</h2>
+        <textarea
+          value={inputText}
+          onChange={(e) => {
+            const val = e.target.value;
+            setInputText(val);
+            updateHighlight(val, phrases);
+          }}
+          rows={6}
+          placeholder="Paste or type text here…"
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            fontSize: '1rem',
+            borderRadius: '6px',
+            border: '1px solid #ccc',
+            boxSizing: 'border-box',
+          }}
+        />
+        <div
+          id="preview"
+          style={{
+            marginTop: '1rem',
+            padding: '0.75rem',
+            background: '#f7f7f7',
+            borderRadius: '6px',
+            minHeight: '5rem',
+            whiteSpace: 'pre-wrap',
+          }}
+          dangerouslySetInnerHTML={{
+            __html: highlightedHtml || inputText,
+          }}
+        />
       </div>
     </div>
   );
