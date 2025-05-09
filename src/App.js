@@ -5,6 +5,7 @@ import './App.css';
 function App() {
   const [phrases, setPhrases] = useState([]);
   const [index, setIndex] = useState(0);
+  const [showList, setShowList] = useState(false);
 
   useEffect(() => {
   // Papa Parse handles commas inside quotes for us
@@ -58,8 +59,15 @@ function App() {
         const pattern = new RegExp(`\\b${escapeRegExp(variant)}\\b`, 'gi');
         result = result.replace(
           pattern,
-          (match) =>
-            `<mark data-replacement="${replacement.replace(/"/g, '&quot;')}" style="background:#fdecea;color:#c0392b;cursor:pointer;">${match}</mark>`
+          (match, offset, str) => {
+            const lastLt  = str.lastIndexOf('<', offset);
+            const lastGt  = str.lastIndexOf('>', offset);
+            if (lastLt > lastGt) return match; // we’re inside a tag → skip
+
+            return `<mark class="mark-tooltip"
+                          data-replacement="${replacement.replace(/"/g, '&quot;')}"
+                          style="background:#fdecea;color:#c0392b;cursor:pointer;position:relative;">${match}</mark>`;
+          }
         );
       });
     });
@@ -188,7 +196,37 @@ function App() {
         >
           Next
         </button>
+        <button
+          onClick={() => setShowList(prev => !prev)}
+          style={{
+            padding: '0.5rem 1rem',
+            fontSize: '1rem',
+            cursor: 'pointer',
+          }}
+        >
+          {showList ? 'Hide list' : 'Show list'}
+        </button>
       </div>
+      {showList && (
+        <div style={{ marginTop: '1rem', overflowY: 'auto', maxHeight: '300px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', margin: '0 auto' }}>
+            <thead>
+              <tr>
+                <th style={{ border: '1px solid #ddd', padding: '4px' }}>Instead of</th>
+                <th style={{ border: '1px solid #ddd', padding: '4px' }}>Try</th>
+              </tr>
+            </thead>
+            <tbody>
+              {phrases.map((p, i) => (
+                <tr key={i}>
+                  <td style={{ border: '1px solid #ddd', padding: '4px' }}>{p.word}</td>
+                  <td style={{ border: '1px solid #ddd', padding: '4px' }}>{p.replacement}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Text checker */}
       <div style={{
@@ -226,6 +264,8 @@ function App() {
             borderRadius: '6px',
             minHeight: '5rem',
             whiteSpace: 'pre-wrap',
+            textAlign: 'left',
+            lineHeight: '1.5',
           }}
           dangerouslySetInnerHTML={{
             __html: highlightedHtml || inputText,

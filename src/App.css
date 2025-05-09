@@ -36,3 +36,38 @@
     transform: rotate(360deg);
   }
 }
+
+/* === Simpler-Alternatives fixes === */
+.App #preview {
+  text-align: left !important;   /* overrules .App’s center */
+  line-height: 1.8;              /* ≈ 6 pt extra breathing room */
+  word-break: break-word;
+}
+
+/* textarea should also be left-flush for consistency */
+.App textarea {
+  text-align: left;
+}
+
+/* Tooltip bubble */
+.mark-tooltip {
+  position: relative;
+  cursor: pointer;
+}
+
+.mark-tooltip:hover::after {
+  content: attr(data-replacement);
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  transform: translateY(-8px);
+  background: #e9f7ef;   /* light green */
+  color: #1e8449;        /* dark green text */
+  padding: 6px 10px;
+  border: 1px solid #1e8449;
+  border-radius: 6px;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  z-index: 10000;
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
+}
